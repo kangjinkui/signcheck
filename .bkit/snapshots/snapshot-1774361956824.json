@@ -1,0 +1,297 @@
+{
+  "timestamp": "2026-03-24T14:19:16.819Z",
+  "reason": "compaction",
+  "status": {
+    "version": "3.0",
+    "lastUpdated": "2026-03-24T14:15:33.249Z",
+    "activeFeatures": [
+      "db",
+      "engine",
+      "privategpt_client.py",
+      "api",
+      "backend",
+      "__init__.py",
+      "scripts",
+      "rag_service.py"
+    ],
+    "primaryFeature": "db",
+    "features": {
+      "db": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T07:11:30.171Z",
+          "lastUpdated": "2026-03-22T07:11:34.396Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/db/__init__.py"
+      },
+      "engine": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T07:11:59.694Z",
+          "lastUpdated": "2026-03-24T14:15:33.249Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/engine/rule_engine.py"
+      },
+      "privategpt_client.py": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T07:12:49.713Z",
+          "lastUpdated": "2026-03-22T07:12:49.713Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/services/privategpt_client.py"
+      },
+      "api": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T07:13:06.781Z",
+          "lastUpdated": "2026-03-24T14:15:03.902Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/api/admin.py"
+      },
+      "backend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T07:13:32.301Z",
+          "lastUpdated": "2026-03-22T07:13:32.301Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/main.py"
+      },
+      "__init__.py": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T07:14:01.395Z",
+          "lastUpdated": "2026-03-22T07:14:01.395Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/services/__init__.py"
+      },
+      "scripts": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T08:25:43.966Z",
+          "lastUpdated": "2026-03-22T09:15:16.223Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/scripts/seed_rules.py"
+      },
+      "rag_service.py": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-22T08:39:27.595Z",
+          "lastUpdated": "2026-03-22T08:39:27.595Z"
+        },
+        "lastFile": "/home/jinkui/dev/SignCheck/backend/services/rag_service.py"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-03-22T05:56:13.786Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-03-24T14:15:33.249Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-03-22T07:11:30.171Z",
+        "feature": "db",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:11:34.396Z",
+        "feature": "db",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:11:59.694Z",
+        "feature": "engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:12:28.319Z",
+        "feature": "engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:12:34.833Z",
+        "feature": "engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:12:49.713Z",
+        "feature": "privategpt_client.py",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:13:06.781Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:13:15.967Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:13:27.127Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:13:32.301Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:14:00.679Z",
+        "feature": "engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:14:01.395Z",
+        "feature": "__init__.py",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T07:14:01.804Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T08:25:43.966Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T08:31:58.297Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T08:34:52.457Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T08:39:27.595Z",
+        "feature": "rag_service.py",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T08:39:42.206Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T08:39:51.011Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-22T09:15:16.223Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-24T14:14:50.511Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-24T14:15:03.902Z",
+        "feature": "api",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-24T14:15:24.603Z",
+        "feature": "engine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-24T14:15:33.249Z",
+        "feature": "engine",
+        "phase": "do",
+        "action": "updated"
+      }
+    ],
+    "stateMachine": {
+      "defaultWorkflow": "default",
+      "activeWorkflows": {},
+      "totalTransitions": 0
+    },
+    "automation": {
+      "globalLevel": 2,
+      "trustScore": 40,
+      "pendingApprovals": 0,
+      "lastGateResult": null
+    },
+    "team": {
+      "enabled": true,
+      "stateFile": ".bkit/runtime/agent-state.json",
+      "eventsFile": ".bkit/runtime/agent-events.jsonl"
+    }
+  }
+}

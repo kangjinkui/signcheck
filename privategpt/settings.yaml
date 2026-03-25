@@ -1,0 +1,39 @@
+server:
+  env_name: production
+  port: 8080
+  cors:
+    enabled: true
+    allow_origins: ["*"]
+
+llm:
+  mode: ollama
+  ollama_api_base: http://ollama:11434
+  model: llama3.1:8b-instruct-q4_K_M
+  temperature: 0.1        # 낮게 설정 → 일관된 답변
+  request_timeout: 60.0
+  context_window: 3900
+  tokenizer: mistral
+
+embedding:
+  mode: ollama
+  ollama_api_base: http://ollama:11434
+  model: nomic-embed-text
+  embed_dim: 768
+
+vectorstore:
+  database: postgres
+  postgres:
+    host: postgres
+    port: 5432
+    database: adjudge
+    user: adjudge
+    password: adjudge
+    schema_name: private_gpt
+
+ui:
+  enabled: false           # API 전용 모드
+
+rag:
+  similarity_top_k: 3
+  rerank:
+    enabled: false

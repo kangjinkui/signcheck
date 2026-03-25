@@ -1,0 +1,39 @@
+{
+  "fetch_date": "2026-03-22",
+  "total": 4,
+  "success": 4,
+  "results": [
+    {
+      "name": "옥외광고물법",
+      "short": "옥외광고물법",
+      "type": "법률",
+      "mst": "273367",
+      "article_count": 39,
+      "status": "success"
+    },
+    {
+      "name": "옥외광고물법_시행령",
+      "short": "옥외광고물법 시행령",
+      "type": "대통령령",
+      "mst": "282903",
+      "article_count": 82,
+      "status": "success"
+    },
+    {
+      "name": "서울시_옥외광고물_조례",
+      "short": "서울특별시 옥외광고물 조례",
+      "type": "조례",
+      "mst": "2099885",
+      "article_count": 37,
+      "status": "success"
+    },
+    {
+      "name": "강남구_옥외광고물_조례",
+      "short": "강남구 옥외광고물 조례",
+      "type": "조례",
+      "mst": "2023185",
+      "article_count": 33,
+      "status": "success"
+    }
+  ]
+}
