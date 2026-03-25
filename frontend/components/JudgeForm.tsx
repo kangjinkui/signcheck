@@ -5,7 +5,7 @@ import type { JudgeRequest } from '@/lib/api';
 const SIGN_TYPES = [
   '돌출간판', '벽면이용간판',
   '옥상간판', '지주이용간판', '입간판', '공연간판',
-  '현수막', '애드벌룬', '애드벌룬(지면)', '창문이용광고물', '선전탑',
+  '현수막', '애드벌룬', '애드벌룬(지면)', '창문이용광고물',
 ];
 
 const WALL_SIGN_SUBTYPES = [
@@ -17,6 +17,53 @@ const ZONES = [
   '일반상업지역', '중심상업지역', '근린상업지역',
   '준공업지역', '일반주거지역', '준주거지역',
 ];
+
+function roundArea(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function calculateArea(width?: number | null, height?: number | null): number | null {
+  if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) {
+    return null;
+  }
+  return roundArea(width * height);
+}
+
+function syncAreaFromSignSize(prev: JudgeRequest, next: Partial<JudgeRequest>): JudgeRequest {
+  const merged = { ...prev, ...next };
+  const calculatedArea = calculateArea(merged.sign_width, merged.sign_height);
+
+  if (calculatedArea === null) {
+    return merged;
+  }
+
+  if (merged.install_subtype === 'wall_sign_general_under_5f') {
+    return {
+      ...merged,
+      sign_area: calculatedArea,
+      area: calculatedArea,
+    };
+  }
+
+  return {
+    ...merged,
+    area: calculatedArea,
+  };
+}
+
+function syncAreaFromProjectingSize(prev: JudgeRequest, next: Partial<JudgeRequest>): JudgeRequest {
+  const merged = { ...prev, ...next };
+  const calculatedArea = calculateArea(merged.width, merged.height);
+
+  if (calculatedArea === null) {
+    return merged;
+  }
+
+  return {
+    ...merged,
+    area: calculatedArea,
+  };
+}
 
 const defaultForm: JudgeRequest = {
   sign_type: '돌출간판',
@@ -43,6 +90,11 @@ const defaultForm: JudgeRequest = {
   install_at_top_floor: null,
   building_width: null,
   requested_faces: null,
+  horizontal_distance_to_other_sign: null,
+  has_performance_hall: null,
+  base_width: null,
+  base_depth: null,
+  distance_from_building: null,
   business_category: '',
   height: 3,
   width: 1,
@@ -60,7 +112,9 @@ const defaultForm: JudgeRequest = {
 
 function applyWallSubtypeDefaults(prev: JudgeRequest, nextSubtype: string): JudgeRequest {
   if (nextSubtype === 'wall_sign_general_under_5f') {
-    const signArea = prev.sign_area ?? prev.area ?? 4.5;
+    const signWidth = prev.sign_width ?? 8;
+    const signHeight = prev.sign_height ?? 0.45;
+    const signArea = calculateArea(signWidth, signHeight) ?? prev.sign_area ?? prev.area ?? 4.5;
     return {
       ...prev,
       install_subtype: nextSubtype,
@@ -68,8 +122,8 @@ function applyWallSubtypeDefaults(prev: JudgeRequest, nextSubtype: string): Judg
       content_type: null,
       display_orientation: null,
       shop_front_width: prev.shop_front_width ?? 10,
-      sign_width: prev.sign_width ?? 8,
-      sign_height: prev.sign_height ?? 0.45,
+      sign_width: signWidth,
+      sign_height: signHeight,
       sign_area: signArea,
       area: signArea,
       is_corner_lot: prev.is_corner_lot ?? false,
@@ -116,6 +170,35 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
     form.sign_type === '벽면이용간판' && form.install_subtype === 'wall_sign_general_under_5f';
   const isWallTop =
     form.sign_type === '벽면이용간판' && form.install_subtype === 'wall_sign_top_building';
+  const usesGenericHeightSpec = [
+    '옥상간판', '지주이용간판', '입간판', '현수막', '애드벌룬', '애드벌룬(지면)', '창문이용광고물',
+  ].includes(form.sign_type);
+  const usesGenericWidthSpec = ['입간판', '현수막', '창문이용광고물'].includes(form.sign_type);
+  const usesGenericProtrusionSpec = form.sign_type === '공연간판';
+  const needsBalloonBuildingHeight = form.sign_type === '애드벌룬';
+  const isRooftopSign = form.sign_type === '옥상간판';
+  const isStandingSign = form.sign_type === '입간판';
+  const isPerformanceSign = form.sign_type === '공연간판';
+  const hasAutoArea =
+    isProjectingSign ||
+    isWallSign ||
+    (usesGenericHeightSpec && usesGenericWidthSpec);
+
+  const genericHeightLabel = {
+    '옥상간판': '간판 높이 (m)',
+    '지주이용간판': '간판 높이 (m)',
+    '입간판': '간판 윗부분 높이 (m)',
+    '현수막': '세로 길이 (m)',
+    '애드벌룬': '애드벌룬 높이 (m)',
+    '애드벌룬(지면)': '애드벌룬 높이 (m)',
+    '창문이용광고물': '세로 길이 (m)',
+  }[form.sign_type];
+
+  const genericWidthLabel = {
+    '입간판': '간판 가로 (m)',
+    '현수막': '가로 길이 (m)',
+    '창문이용광고물': '가로 길이 (m)',
+  }[form.sign_type];
 
   const set = (field: keyof JudgeRequest, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }));
@@ -193,6 +276,8 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
             min={0.1}
             step={0.1}
             value={isWallGeneral ? (form.sign_area ?? '') : form.area}
+            readOnly={hasAutoArea}
+            disabled={hasAutoArea}
             onChange={e => {
               const nextValue = parseFloat(e.target.value) || 0.1;
               if (isWallGeneral) {
@@ -235,7 +320,9 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
                 min={0.1}
                 step={0.1}
                 value={form.sign_width ?? ''}
-                onChange={e => set('sign_width', parseFloat(e.target.value) || null)}
+                onChange={e =>
+                  setForm(prev => syncAreaFromSignSize(prev, { sign_width: parseFloat(e.target.value) || null }))
+                }
               />
             </div>
 
@@ -246,7 +333,9 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
                 min={0.1}
                 step={0.01}
                 value={form.sign_height ?? ''}
-                onChange={e => set('sign_height', parseFloat(e.target.value) || null)}
+                onChange={e =>
+                  setForm(prev => syncAreaFromSignSize(prev, { sign_height: parseFloat(e.target.value) || null }))
+                }
               />
             </div>
 
@@ -356,7 +445,9 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
                 min={0.1}
                 step={0.1}
                 value={form.sign_width ?? ''}
-                onChange={e => set('sign_width', parseFloat(e.target.value) || null)}
+                onChange={e =>
+                  setForm(prev => syncAreaFromSignSize(prev, { sign_width: parseFloat(e.target.value) || null }))
+                }
               />
             </div>
 
@@ -367,7 +458,9 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
                 min={0.1}
                 step={0.1}
                 value={form.sign_height ?? ''}
-                onChange={e => set('sign_height', parseFloat(e.target.value) || null)}
+                onChange={e =>
+                  setForm(prev => syncAreaFromSignSize(prev, { sign_height: parseFloat(e.target.value) || null }))
+                }
               />
             </div>
 
@@ -459,7 +552,9 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
                 min={0.1}
                 step={0.1}
                 value={form.height ?? ''}
-                onChange={e => set('height', parseFloat(e.target.value) || null)}
+                onChange={e =>
+                  setForm(prev => syncAreaFromProjectingSize(prev, { height: parseFloat(e.target.value) || null }))
+                }
               />
             </div>
 
@@ -470,7 +565,9 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
                 min={0.1}
                 step={0.1}
                 value={form.width ?? ''}
-                onChange={e => set('width', parseFloat(e.target.value) || null)}
+                onChange={e =>
+                  setForm(prev => syncAreaFromProjectingSize(prev, { width: parseFloat(e.target.value) || null }))
+                }
               />
             </div>
 
@@ -610,6 +707,169 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
             <label>연립 업체 수</label>
             <input type="number" min={1} value={form.vendor_count ?? ''}
               onChange={e => set('vendor_count', parseInt(e.target.value) || null)} />
+          </div>
+        )}
+
+        {isRooftopSign && (
+          <>
+            <div className="form-group">
+              <label>건물 층수</label>
+              <input
+                type="number"
+                min={1}
+                value={form.building_floor_count ?? ''}
+                onChange={e => set('building_floor_count', parseInt(e.target.value) || null)}
+              />
+            </div>
+            <div className="form-group">
+              <label>건물 높이 (m)</label>
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={form.building_height ?? ''}
+                onChange={e => set('building_height', parseFloat(e.target.value) || null)}
+              />
+            </div>
+            <div className="form-group">
+              <label>최근접 옥상간판 수평거리 (m)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                value={form.horizontal_distance_to_other_sign ?? ''}
+                onChange={e => set('horizontal_distance_to_other_sign', parseFloat(e.target.value) || null)}
+              />
+            </div>
+          </>
+        )}
+
+        {isStandingSign && (
+          <>
+            <div className="form-group">
+              <label>바닥면 가로 (m)</label>
+              <input
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={form.base_width ?? ''}
+                onChange={e => set('base_width', parseFloat(e.target.value) || null)}
+              />
+            </div>
+            <div className="form-group">
+              <label>바닥면 세로 (m)</label>
+              <input
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={form.base_depth ?? ''}
+                onChange={e => set('base_depth', parseFloat(e.target.value) || null)}
+              />
+            </div>
+            <div className="form-group">
+              <label>건물면으로부터 거리 (m)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                value={form.distance_from_building ?? ''}
+                onChange={e => set('distance_from_building', parseFloat(e.target.value) || null)}
+              />
+            </div>
+          </>
+        )}
+
+        {isPerformanceSign && (
+          <>
+            <div className="form-group">
+              <label>벽면 가로폭 (m)</label>
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={form.building_width ?? ''}
+                onChange={e => set('building_width', parseFloat(e.target.value) || null)}
+              />
+            </div>
+            <div className="form-group full">
+              <label>공연장 여부</label>
+              <div className="radio-group">
+                <label>
+                  <input
+                    type="radio"
+                    name="has_performance_hall"
+                    checked={form.has_performance_hall === true}
+                    onChange={() => set('has_performance_hall', true)}
+                  />
+                  공연장 있음
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="has_performance_hall"
+                    checked={form.has_performance_hall === false}
+                    onChange={() => set('has_performance_hall', false)}
+                  />
+                  공연장 없음
+                </label>
+              </div>
+            </div>
+          </>
+        )}
+
+        {usesGenericHeightSpec && (
+          <div className="form-group">
+            <label>{genericHeightLabel}</label>
+            <input
+              type="number"
+              min={0.1}
+              step={0.1}
+              value={form.sign_height ?? ''}
+              onChange={e =>
+                setForm(prev => syncAreaFromSignSize(prev, { sign_height: parseFloat(e.target.value) || null }))
+              }
+            />
+          </div>
+        )}
+
+        {usesGenericWidthSpec && (
+          <div className="form-group">
+            <label>{genericWidthLabel}</label>
+            <input
+              type="number"
+              min={0.1}
+              step={0.1}
+              value={form.sign_width ?? ''}
+              onChange={e =>
+                setForm(prev => syncAreaFromSignSize(prev, { sign_width: parseFloat(e.target.value) || null }))
+              }
+            />
+          </div>
+        )}
+
+        {usesGenericProtrusionSpec && (
+          <div className="form-group">
+            <label>돌출폭 (m)</label>
+            <input
+              type="number"
+              min={0.01}
+              step={0.01}
+              value={form.protrusion ?? ''}
+              onChange={e => set('protrusion', parseFloat(e.target.value) || null)}
+            />
+          </div>
+        )}
+
+        {needsBalloonBuildingHeight && (
+          <div className="form-group">
+            <label>건물 높이 (m)</label>
+            <input
+              type="number"
+              min={0.1}
+              step={0.1}
+              value={form.building_height ?? ''}
+              onChange={e => set('building_height', parseFloat(e.target.value) || null)}
+            />
           </div>
         )}
       </div>
