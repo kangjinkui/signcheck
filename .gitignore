@@ -1,3 +1,5 @@
+.bkit/
+.claude/
 .env
 .env.*
 *.pyc
@@ -12,3 +14,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.Zone.Identifier
+*:Zone.Identifier
+write-post/
