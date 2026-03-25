@@ -248,10 +248,286 @@ Docker 실행 후 --init-db 테스트, 이후 FastAPI 판정 엔진 연동
 
 ---
 
-## 잔여 과제
+## 잔여 과제 (Day 2 기준)
 
-- [ ] 공연간판 규칙 추가 (서울시 조례 제7조)
+- [x] 공연간판 규칙 추가 → Day 3에서 처리
+- [x] 프론트엔드 구현 → Day 3에서 완료
 - [ ] 옥상간판 세부 규격 보완 (시행령 별표 기준)
 - [ ] 규칙 데이터를 시드 스크립트로 관리 (현재는 직접 SQL)
-- [ ] 프론트엔드 구현
 - [ ] 내부망 배포 환경 설정
+
+---
+
+## 2026-03-25 (Day 3) — Codex (GPT-5.4)
+
+> 이날은 Claude Code 대신 **Codex (GPT-5.4)** 와 함께 9개 세션에 걸쳐 작업했습니다.
+
+---
+
+### 13. 프론트엔드 채팅 API 오류 수정
+
+```
+자 이제 구축된 프론트에서 실험을 하고 있는데, 추가질문을 했는데, 오류가 발생했습니다.
+다시 시도해주세요라는 문구가 뜬다. 이거 고치고 싶다.
+Failed to load resource: the server responded with a status of 404 (Not Found)
+Access to fetch at 'http://localhost:8000/api/v1/chat' from origin 'http://localhost:3000' has been blocked
+```
+
+**Codex 작업:**
+- `/api/v1/chat` 엔드포인트 404 원인 분석
+- CORS 정책 오류 수정 (origin 허용 설정)
+- 채팅 기능 정상화 확인
+
+---
+
+### 14. 판정 불가(prohibited) 누락 문제 발견
+
+```
+db를 확인하고 싶다. 지금 문제가 예를 들어 돌출간판이 설치층수 제한과 면적(가로, 세로)
+제한을 규격을 바탕으로 불가 판정을 해줘야 하는데, 지금은 층수제한을 넘어도
+"설치불가" 판정을 안해준다.
+```
+
+**Codex 작업:**
+- DB 규칙 테이블 전수 검토
+- 층수 제한 초과 시 prohibited 판정 미반영 원인 파악
+- rule_condition 조건 로직 수정 설계
+
+---
+
+### 15. 벡터 DB 법령 내용 보강
+
+```
+지금 법률에서 벡터db로 옮긴 내용에 아래와 같은 정보가 포함되어 있어야 한다.
+돌출간판
+1. 일반적인 규격 제한
+돌출 폭(가로): 벽면으로부터 1m 이내로 표시해야 합니다.
+세로 길이: 3.5m 이내가 원칙이며, 건물의 1개 층 높이 이내로 표시해야 합니다.
+두께: 30cm 이내여야 합니다...
+```
+
+**Codex 작업:**
+- 기존 벡터 DB 청킹 내용 부족 확인
+- 설치 위치, 세부 규격 등 상세 정보 law_chunk 재임베딩
+- 판정 엔진과 벡터 DB 연계 목표 정의
+
+```
+내가 원하는 것은 벡터DB가 판정DB로 연계되어서 실제로 사용자에게 도움이 되는 것이다.
+돌출간판처럼 설치불가이면 설치 불가 판정을 해줘야 한다.
+```
+
+---
+
+### 16. 규칙 확장 계획 수립 — sign-rule-expansion-plan.md
+
+```
+돌출간판에서 시작해서 모든 간판으로 판정을 확장하는 계획을 세우고 보고해줘
+```
+
+**Codex 작업:**
+- 전체 간판 유형별 규칙 확장 로드맵 수립
+- `docs/sign-rule-expansion-plan.md` 작성 (Epic A~D 구조)
+- 백로그 태스크 분류: TASK-A1~A5, TASK-B1~B2, TASK-C1~C3, Epic D
+
+---
+
+### 17. 개발 태스크 실행 및 병렬 작업 설정
+
+```
+docs/sign-rule-expansion-plan.md에 따라 개발 태스크를 만들어 보자
+개발 백로그를 수행할 때마다 업데이트를 해줬으면 좋겠어.
+그리고 개발속도를 빠르게 하기 위해서 멀티에이전트를 병렬로 할 수 있을까?
+```
+
+**Codex 작업:**
+- CLAUDE.md에 백로그 자동 업데이트 규칙 설정
+- "단일 에이전트 + 병렬 작업" 방식 결정
+- TASK-A1 시작: 판정 엔진 기반 리팩터링
+- TASK-A2 → A3 → A4 순차 실행
+
+| 태스크 | 내용 |
+|--------|------|
+| TASK-A1 | 판정 엔진 prohibited 판정 로직 구현 |
+| TASK-A2 | 돌출간판 층수/규격 초과 조건 rule_condition 반영 |
+| TASK-A3 | 벽면이용간판 층수 기반 조건 추가 |
+| TASK-A4 | 나머지 간판 유형 기본 prohibited 조건 추가 |
+
+---
+
+### 18. 컨텍스트 관리 — handoff.md 도입
+
+```
+컨텍스트 관리를 위해 이번 세션은 종료하고 새로운 세션으로 작업하려고 하는데,
+docs/sign-rule-expansion-plan.md 이거만 다음 세션에 제공해주면 이어서 작업하나?
+아님 추가로 인수인계를 위한 handoff.md를 만드는 게 나을까?
+```
+
+**Codex 작업:**
+- 세션 간 컨텍스트 유실 문제 해결 방안 논의
+- `docs/handoff-sign-rule-expansion.md` 생성
+- 세션 종료 시마다 진행 상황, 완료 태스크, 다음 작업 기록
+
+---
+
+### 19. TASK-A5, B1, B2 — 예외 규칙 분리 및 DB 마이그레이션
+
+```
+TASK-A5로 예외 규칙을 보조 테이블로 분리 후에 TASK-B1 시작
+TASK-B2 진행하자. DB 마이그레이션 언제 하는 게 좋을까?
+```
+
+**Codex 작업:**
+- TASK-A5: 업종 예외 규칙을 `industry_exception_rule` 테이블로 분리
+- TASK-B1: 업종 예외 적용 로직 판정 엔진에 연동
+- TASK-B2: DB 마이그레이션 실행 (`db/migrations/20260325_fix_standing_sign_rules.sql`)
+- handoff.md 업데이트
+
+---
+
+### 20. TASK-C1~C3, Epic D — RAG 연계 및 전체 완성
+
+```
+docs/handoff-sign-rule-expansion.md, docs/sign-rule-expansion-plan.md 참고해서
+현재 상황 파악하고, TASK-C1 개발 시작하자
+```
+
+**Codex 작업:**
+- TASK-C1: law_chunk RAG 추출 결과 → draft_rule 자동 적재 연결
+- TASK-C2: draft_rule 승인 시 `industry_exception_rule`, `sign_count_rule`, `special_zone_rule` 자동 승격 흐름 구현
+- TASK-C3: 관리자 UI에서 초안 규칙 검토/승인 기능 연동
+- Epic D: 전체 마무리 구현
+
+---
+
+### 21. 422 오류 수정 및 판정 정확도 검증
+
+```
+사이트 테스트해보니까, Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)
+판정하기 누르면 아래와 같은 에러 뜬다.
+db에 정보에 따르면 돌출간판은 5층 이상은 설치불가 판정이 나와야 하는데.
+```
+
+**Codex 작업:**
+- API 요청 스키마 불일치(422) 원인 수정
+- 돌출간판 5층 이상 `prohibited` 판정 정상화 확인
+- 입간판 11층, 30㎡ 설치불가 판정 수정
+
+```
+좋네 잘 반영되네, 좋은데
+```
+
+---
+
+### 22. Git 초기화 및 GitHub 원격 저장소 연결
+
+```
+깃 초기화해주세요
+https://github.com/kangjinkui/signcheck.git 여기 원격 저장소로 푸시하고 싶다
+```
+
+**Codex 작업:**
+- `git init` 및 `.gitignore` 설정
+- GitHub 원격 저장소 연결 및 초기 푸시
+
+---
+
+### 23. 배포 방안 논의
+
+```
+이제 배포를 하고 싶은데, 어떤 방법이 좋을까?
+그럼 나한테 디지털오션 VM이 있어. 거기에 올리는 형태로 할 수도 있겠네
+4 vCPU / 8GB RAM 이 정도 하려면 요금제가 얼마지?
+너무 비싸서 안 되겠다. 회사에 폐쇄망에 내 IP가 있는데, 내 PC를 서버로 해서
+IP 주소 기반으로 배포 가능할까? PC는 윈도우를 사용하고 있고, Docker를 사용해서 배포할 계획이다.
+```
+
+**Codex 작업:**
+- DigitalOcean 비용 분석 ($48/월 — 예산 초과로 포기)
+- Windows PC + Docker 기반 폐쇄망 내부 배포 방안 설계
+- `docker-compose.prod.yml`, `backend/Dockerfile.prod`, `frontend/Dockerfile.prod` 작성
+- `docs/deployment-plan-windows-intranet.md` 배포 가이드 작성
+
+---
+
+### 24. 간판 유형별 세부 조건 추가
+
+```
+돌출간판은 추가 조건이 있다. 벽면이용간판 상단간판도 추가 조건이 있다.
+다른 간판도 규격이 개별 규격이 있는데 그것도 반영해줘
+```
+
+**Codex 작업:**
+- 간판별 세부 조건 추가:
+  - 벽면이용간판: 가로 길이가 건물 벽면 폭의 1/3 초과 시 불가
+  - 입간판: 바닥면 가로 0.5m × 세로 0.7m 초과 불가, 건물면에서 1m 초과 불가, 보행로 설치 불가
+  - 옥상간판: 지상 구조물 설치 위치 제한 조건 추가
+  - 지주이용간판: 도로변 이격 거리 조건 추가
+- 선전탑: 실무 비사용 사유로 제외 결정
+
+```
+선전탑은 아예 실무에서 잘 사용되지 않으니까 빼버려
+```
+
+---
+
+### 25. 프론트엔드 세부 조건 입력 필드 추가
+
+```
+추가한 세부 조건들이 지금 프론트 서버에 반영이 안되어 있어.
+옥상간판, 지주이용간판, 입간판 등 말이야
+```
+
+**Codex 작업:**
+- `frontend/components/JudgeForm.tsx` — 간판 유형별 조건부 입력 필드 추가
+- 옥상간판, 지주이용간판, 입간판 전용 입력 UI 구현
+- Docker 재빌드 없이 핫리로드로 프론트 반영
+
+---
+
+## 커밋 히스토리
+
+| 날짜 | 커밋 | 설명 |
+|------|------|------|
+| 03/25 | `44952a2` | Ignore local metadata and embedded repo |
+| 03/20 | `4f207d8` | Initial commit |
+
+---
+
+## 기술 스택
+
+- **Frontend**: Next.js (App Router, SSR)
+- **Backend**: FastAPI (Python), Docker Compose
+- **Database**: PostgreSQL + pgvector
+- **AI/RAG**: LlamaIndex, Ollama (로컬 LLM)
+- **법령 데이터**: 국가법령정보공단 Open API
+- **배포**: Windows PC + Docker (폐쇄망 내부 IP 기반)
+- **AI 도구**: Claude Code (claude-sonnet-4-6) → Codex (GPT-5.4)
+
+---
+
+## 주요 기능 (완성 기준)
+
+1. **옥외광고물 허가/신고/불가 판정 엔진**
+   - 간판 유형, 층수, 면적, 조명 방식, 용도지역 등 입력
+   - 허가(permit) / 신고(report) / 불가(prohibited) 자동 판정
+   - 층수·규격 초과 시 prohibited 판정 포함
+
+2. **세부 조건 판정**
+   - 돌출간판: 돌출폭, 세로 길이, 두께 초과 조건
+   - 벽면이용간판: 벽면 폭 1/3 초과 조건
+   - 입간판: 바닥면 규격, 보행로 설치 금지
+
+3. **법령 RAG 근거 조문 연계**
+   - 판정 결과와 함께 관련 법령 조문 반환
+   - draft_rule → 실제 rule 자동 승격 흐름
+
+4. **업종 예외 처리**
+   - 의료기관, 약국, 이용업소 등 업종별 예외 규칙 별도 테이블 관리
+
+5. **관리자 도구**
+   - 규칙 초안(draft_rule) 검토 및 승인 UI
+   - 실시간 규칙 CRUD
+
+6. **배포 환경**
+   - Windows PC + Docker Compose (폐쇄망 내부 배포)
+   - 프로덕션용 Dockerfile 분리

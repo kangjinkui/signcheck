@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field, model_validator
 from typing import Optional
 import uuid
 
 from db import get_db
-from db.models import CaseLog
+from db.models import CaseLog, DocumentMaster, Provision
 from engine.rule_engine import RuleEngine, JudgeInput
 from engine.fee_calculator import calculate as calc_fee
 from engine.checklist import generate as gen_checklist
@@ -40,6 +41,11 @@ class JudgeCommonRequestFields(BaseModel):
     install_at_top_floor: Optional[bool] = None
     building_width: Optional[float] = Field(default=None, gt=0)
     requested_faces: Optional[int] = Field(default=None, ge=1)
+    horizontal_distance_to_other_sign: Optional[float] = Field(default=None, ge=0)
+    has_performance_hall: Optional[bool] = None
+    base_width: Optional[float] = Field(default=None, gt=0)
+    base_depth: Optional[float] = Field(default=None, gt=0)
+    distance_from_building: Optional[float] = Field(default=None, ge=0)
 
 
 class JudgeProjectingSignRequestFields(BaseModel):
@@ -77,6 +83,8 @@ class JudgeRequest(JudgeCommonRequestFields, JudgeProjectingSignRequestFields):
 
     @model_validator(mode="after")
     def validate_sign_specific_fields(self):
+        if self.sign_type == "선전탑":
+            raise ValueError("선전탑은 현재 지원하지 않는 광고물 유형입니다.")
         return self
 
 
@@ -111,6 +119,49 @@ class JudgeResponse(BaseModel):
     fallback_reason: str
 
 
+async def _resolve_provisions(
+    db: AsyncSession,
+    req: JudgeRequest,
+    result,
+) -> tuple[list[dict], list[str]]:
+    provisions = []
+    rag_chunks = []
+
+    if result.provision_id:
+        provision_stmt = (
+            select(Provision, DocumentMaster)
+            .join(DocumentMaster, Provision.document_id == DocumentMaster.id)
+            .where(Provision.id == uuid.UUID(result.provision_id))
+        )
+        provision_row = (await db.execute(provision_stmt)).first()
+        if provision_row:
+            provision, document = provision_row
+            provisions.append({
+                "law": document.name,
+                "article": provision.article,
+                "content": provision.content,
+                "similarity": 1.0,
+            })
+            rag_chunks.append(provision.article or str(provision.id))
+            return provisions, rag_chunks
+
+    try:
+        query = f"{req.sign_type} {req.zone} {req.floor}층 {req.area}㎡ 설치 허가 신고 요건"
+        hits = await rag_service.search(db, query, top_k=3)
+        for hit in hits:
+            provisions.append({
+                "law":     hit["법령명"],
+                "article": hit["조문번호"],
+                "content": hit["조문내용"],
+                "similarity": hit["similarity"],
+            })
+            rag_chunks.append(hit["조문번호"])
+    except Exception:
+        pass
+
+    return provisions, rag_chunks
+
+
 @router.post("/judge", response_model=JudgeResponse)
 async def judge(req: JudgeRequest, db: AsyncSession = Depends(get_db)):
     inp = JudgeInput(**req.model_dump())
@@ -124,22 +175,8 @@ async def judge(req: JudgeRequest, db: AsyncSession = Depends(get_db)):
     # 3. 서류 목록
     docs = await gen_checklist(db, result.decision, req.sign_type)
 
-    # 4. RAG 근거 조문 검색 (비동기, 실패해도 판정 결과는 반환)
-    provisions = []
-    rag_chunks = []
-    try:
-        query = f"{req.sign_type} {req.zone} {req.floor}층 {req.area}㎡ 설치 허가 신고 요건"
-        hits = await rag_service.search(db, query, top_k=3)
-        for hit in hits:
-            provisions.append({
-                "law":     hit["법령명"],
-                "article": hit["조문번호"],
-                "content": hit["조문내용"],
-                "similarity": hit["similarity"],
-            })
-            rag_chunks.append(hit["조문번호"])
-    except Exception:
-        pass  # RAG 실패 시 판정 결과는 그대로 반환
+    # 4. 근거 조문: 규칙에 연결된 provision_id 우선, 없으면 RAG 보조 검색
+    provisions, rag_chunks = await _resolve_provisions(db, req, result)
 
     # 5. 로그 저장
     case_id = str(uuid.uuid4())

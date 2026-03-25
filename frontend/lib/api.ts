@@ -25,6 +25,11 @@ export interface JudgeCommonRequestFields {
   install_at_top_floor?: boolean | null;
   building_width?: number | null;
   requested_faces?: number | null;
+  horizontal_distance_to_other_sign?: number | null;
+  has_performance_hall?: boolean | null;
+  base_width?: number | null;
+  base_depth?: number | null;
+  distance_from_building?: number | null;
 }
 
 export interface JudgeProjectingSignRequestFields {

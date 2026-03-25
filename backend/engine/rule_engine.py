@@ -43,6 +43,11 @@ class JudgeInput:
     install_at_top_floor: Optional[bool] = None
     building_width: Optional[float] = None
     requested_faces: Optional[int] = None
+    horizontal_distance_to_other_sign: Optional[float] = None
+    has_performance_hall: Optional[bool] = None
+    base_width: Optional[float] = None
+    base_depth: Optional[float] = None
+    distance_from_building: Optional[float] = None
     business_category: Optional[str] = None
     height: Optional[float] = None
     width: Optional[float] = None
@@ -115,6 +120,15 @@ class RuleEngine:
             and input.install_subtype == "wall_sign_top_building"
         ):
             return await self._judge_wall_sign_top_building(db, input)
+
+        if input.sign_type == "옥상간판":
+            return await self._judge_rooftop_sign(db, input)
+
+        if input.sign_type == "공연간판":
+            return await self._judge_performance_sign(db, input)
+
+        if input.sign_type == "입간판":
+            return await self._judge_standing_sign(db, input)
 
         # 1. 용도지역 금지 유형 체크
         zone_check = await self._check_zone_prohibited(db, input)
@@ -367,6 +381,190 @@ class RuleEngine:
             provision_id=str(effect.provision_id) if effect.provision_id else None,
         )
 
+    async def _judge_rooftop_sign(
+        self,
+        db: AsyncSession,
+        input: JudgeInput,
+    ) -> JudgeResult:
+        zone_check = await self._check_zone_prohibited(db, input)
+        if zone_check:
+            return zone_check
+
+        rules = await self._fetch_matching_rules(db, input)
+        if not rules:
+            return JudgeResult(
+                decision="report",
+                review_type="대심의",
+                administrative_action="permit",
+                display_period="3년",
+                warnings=["옥상간판 규칙이 아직 정의되지 않아 확정 판정을 할 수 없습니다."],
+                fallback_reason="missing_rule",
+            )
+
+        condition, effect = rules[0]
+        violations: list[str] = []
+        if input.building_floor_count is not None and input.building_floor_count > 15:
+            violations.append("옥상간판은 15층 이하 건물 옥상에만 표시할 수 있습니다.")
+        if (
+            input.horizontal_distance_to_other_sign is not None
+            and input.horizontal_distance_to_other_sign < 50
+        ):
+            violations.append(
+                f"옥상간판 간 수평거리 {input.horizontal_distance_to_other_sign}m는 최소 기준 50m에 미달합니다."
+            )
+        if input.sign_height is not None and input.building_height is not None:
+            half_height = input.building_height / 2
+            if input.sign_height > half_height:
+                violations.append(
+                    f"옥상간판 높이 {input.sign_height}m가 건물 높이의 1/2 기준 {half_height}m를 초과합니다."
+                )
+
+        spec_check = self._check_spec(input, effect)
+        if spec_check:
+            violations.extend(spec_check.warnings)
+
+        if violations:
+            return JudgeResult(
+                decision="prohibited",
+                administrative_action=None,
+                review_type=effect.review_type,
+                safety_check=effect.safety_check or False,
+                max_height=float(effect.max_height) if effect.max_height else None,
+                display_period=effect.display_period,
+                warnings=violations,
+                matched_rule_id=str(condition.id),
+                provision_id=str(effect.provision_id) if effect.provision_id else None,
+            )
+
+        return JudgeResult(
+            decision=effect.decision,
+            administrative_action=effect.administrative_action or "permit",
+            review_type=effect.review_type,
+            safety_check=effect.safety_check or False,
+            max_height=float(effect.max_height) if effect.max_height else None,
+            display_period=effect.display_period,
+            warnings=list(effect.warnings or []),
+            matched_rule_id=str(condition.id),
+            provision_id=str(effect.provision_id) if effect.provision_id else None,
+        )
+
+    async def _judge_performance_sign(
+        self,
+        db: AsyncSession,
+        input: JudgeInput,
+    ) -> JudgeResult:
+        zone_check = await self._check_zone_prohibited(db, input)
+        if zone_check:
+            return zone_check
+
+        rules = await self._fetch_matching_rules(db, input)
+        if not rules:
+            return JudgeResult(
+                decision="report",
+                review_type="대심의",
+                administrative_action="permit",
+                display_period="3년",
+                warnings=["공연간판 규칙이 아직 정의되지 않아 확정 판정을 할 수 없습니다."],
+                fallback_reason="missing_rule",
+            )
+
+        condition, effect = rules[0]
+        violations: list[str] = []
+        if input.has_performance_hall is False:
+            violations.append("공연간판은 공연장이 있는 건물의 벽면에만 표시할 수 있습니다.")
+        if input.building_width is not None and input.sign_width is not None:
+            max_width = input.building_width / 3
+            if input.sign_width > max_width:
+                violations.append(
+                    f"공연간판 가로 {input.sign_width}m가 해당 벽면 가로폭의 1/3 기준 {max_width}m를 초과합니다."
+                )
+
+        spec_check = self._check_spec(input, effect)
+        if spec_check:
+            violations.extend(spec_check.warnings)
+
+        if violations:
+            return JudgeResult(
+                decision="prohibited",
+                administrative_action=None,
+                review_type=effect.review_type,
+                max_protrusion=float(effect.max_protrusion) if effect.max_protrusion else None,
+                display_period=effect.display_period,
+                warnings=list(effect.warnings or []) + violations,
+                matched_rule_id=str(condition.id),
+                provision_id=str(effect.provision_id) if effect.provision_id else None,
+            )
+
+        return JudgeResult(
+            decision=effect.decision,
+            administrative_action=effect.administrative_action or "permit",
+            review_type=effect.review_type,
+            max_protrusion=float(effect.max_protrusion) if effect.max_protrusion else None,
+            display_period=effect.display_period,
+            warnings=list(effect.warnings or []),
+            matched_rule_id=str(condition.id),
+            provision_id=str(effect.provision_id) if effect.provision_id else None,
+        )
+
+    async def _judge_standing_sign(
+        self,
+        db: AsyncSession,
+        input: JudgeInput,
+    ) -> JudgeResult:
+        zone_check = await self._check_zone_prohibited(db, input)
+        if zone_check:
+            return zone_check
+
+        rules = await self._fetch_matching_rules(db, input)
+        if not rules:
+            return JudgeResult(
+                decision="report",
+                review_type="소심의",
+                administrative_action="report",
+                display_period="1년",
+                warnings=["입간판 규칙이 아직 정의되지 않아 확정 판정을 할 수 없습니다."],
+                fallback_reason="missing_rule",
+            )
+
+        condition, effect = rules[0]
+        spec_check = self._check_spec(input, effect)
+        violations = list(spec_check.warnings) if spec_check else []
+        if input.base_width is not None and input.base_width > 0.5:
+            violations.append(f"입간판 바닥면 가로 {input.base_width}m가 허용 기준 0.5m를 초과합니다.")
+        if input.base_depth is not None and input.base_depth > 0.7:
+            violations.append(f"입간판 바닥면 세로 {input.base_depth}m가 허용 기준 0.7m를 초과합니다.")
+        if input.distance_from_building is not None and input.distance_from_building > 1.0:
+            violations.append(
+                f"입간판 설치 거리가 건물면으로부터 {input.distance_from_building}m로 허용 기준 1m를 초과합니다."
+            )
+        if input.has_sidewalk:
+            violations.append("입간판은 보행자 통로에 설치할 수 없습니다.")
+
+        if violations:
+            return JudgeResult(
+                decision="prohibited",
+                administrative_action=None,
+                review_type=effect.review_type,
+                max_area=float(effect.max_area) if effect.max_area else None,
+                max_height=float(effect.max_height) if effect.max_height else None,
+                display_period=effect.display_period,
+                warnings=violations,
+                matched_rule_id=str(condition.id),
+                provision_id=str(effect.provision_id) if effect.provision_id else None,
+            )
+
+        return JudgeResult(
+            decision=effect.decision,
+            administrative_action=effect.administrative_action or self._map_administrative_action(effect.decision),
+            review_type=effect.review_type,
+            max_area=float(effect.max_area) if effect.max_area else None,
+            max_height=float(effect.max_height) if effect.max_height else None,
+            display_period=effect.display_period,
+            warnings=list(effect.warnings or []),
+            matched_rule_id=str(condition.id),
+            provision_id=str(effect.provision_id) if effect.provision_id else None,
+        )
+
     async def _run_projecting_sign_prohibition_checks(
         self,
         db: AsyncSession,
@@ -513,9 +711,14 @@ class RuleEngine:
                 "exception_review_approved",
             ),
             "벽면이용간판": ("install_subtype",),
-            "지주이용간판": ("vendor_count",),
-            "공연간판": ("vendor_count",),
-            "입간판": ("has_sidewalk",),
+            "옥상간판": ("sign_height", "building_height", "building_floor_count", "horizontal_distance_to_other_sign"),
+            "지주이용간판": ("vendor_count", "sign_height"),
+            "공연간판": ("vendor_count", "protrusion", "sign_width", "building_width", "has_performance_hall"),
+            "입간판": ("has_sidewalk", "sign_height", "base_width", "base_depth", "distance_from_building"),
+            "현수막": ("sign_width", "sign_height"),
+            "애드벌룬": ("sign_height", "building_height"),
+            "애드벌룬(지면)": ("sign_height",),
+            "창문이용광고물": ("sign_width", "sign_height"),
         }
         required_fields = list(required_fields_by_sign_type.get(input.sign_type, ()))
         if (
@@ -848,13 +1051,76 @@ class RuleEngine:
             provision_id=str(effect.provision_id) if effect.provision_id else None,
         )
 
-    def _check_spec(self, input: JudgeInput, effect) -> Optional[JudgeResult]:
-        """규격 초과 체크 — 입력 면적이 허용 최대값을 초과하면 prohibited 반환"""
-        warnings = []
+    def _generic_height_label(self, sign_type: str) -> str:
+        return {
+            "옥상간판": "간판 높이",
+            "지주이용간판": "간판 높이",
+            "입간판": "간판 윗부분 높이",
+            "현수막": "세로 길이",
+            "애드벌룬": "애드벌룬 높이",
+            "애드벌룬(지면)": "애드벌룬 높이",
+            "창문이용광고물": "세로 길이",
+        }.get(sign_type, "간판 높이")
+
+    def _generic_width_label(self, sign_type: str) -> str:
+        return {
+            "입간판": "간판 가로",
+            "현수막": "가로 길이",
+            "창문이용광고물": "가로 길이",
+        }.get(sign_type, "간판 가로")
+
+    def _collect_generic_spec_violations(
+        self,
+        input: JudgeInput,
+        effect,
+    ) -> list[str]:
+        warnings: list[str] = []
+
         if effect.max_area and Decimal(str(input.area)) > effect.max_area:
             warnings.append(
                 f"면적 {input.area}㎡이 허용 최대 {float(effect.max_area)}㎡를 초과하여 설치 불가"
             )
+
+        if effect.max_height and input.sign_height is not None:
+            max_height = float(effect.max_height)
+            if input.sign_height > max_height:
+                warnings.append(
+                    f"{self._generic_height_label(input.sign_type)} {input.sign_height}m가 "
+                    f"허용 기준 {max_height}m를 초과합니다."
+                )
+
+        if effect.max_width and input.sign_width is not None:
+            max_width = float(effect.max_width)
+            if input.sign_width > max_width:
+                warnings.append(
+                    f"{self._generic_width_label(input.sign_type)} {input.sign_width}m가 "
+                    f"허용 기준 {max_width}m를 초과합니다."
+                )
+
+        if effect.max_protrusion and input.protrusion is not None:
+            max_protrusion = float(effect.max_protrusion)
+            if input.protrusion > max_protrusion:
+                warnings.append(
+                    f"돌출폭 {input.protrusion}m가 허용 기준 {max_protrusion}m를 초과합니다."
+                )
+
+        if (
+            input.sign_type == "애드벌룬"
+            and input.sign_height is not None
+            and input.building_height is not None
+        ):
+            building_half_limit = input.building_height / 2
+            if input.sign_height > building_half_limit:
+                warnings.append(
+                    f"애드벌룬 높이 {input.sign_height}m가 건물 높이의 1/2 기준 "
+                    f"{building_half_limit}m를 초과합니다."
+                )
+
+        return warnings
+
+    def _check_spec(self, input: JudgeInput, effect) -> Optional[JudgeResult]:
+        """규격 초과 체크 — 입력 규격이 허용 최대값을 초과하면 prohibited 반환"""
+        warnings = self._collect_generic_spec_violations(input, effect)
         if warnings:
             return JudgeResult(
                 decision="prohibited",
