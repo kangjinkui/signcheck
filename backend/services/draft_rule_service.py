@@ -6,7 +6,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import DraftRule
-from services import rag_service
 
 
 _LAW_CHUNK_BASE_SQL = """
@@ -98,12 +97,7 @@ async def fetch_rag_hits(
     top_k: int,
     min_similarity: float,
 ) -> list[dict]:
-    return await rag_service.search_with_metadata(
-        db,
-        query=query,
-        top_k=top_k,
-        min_similarity=min_similarity,
-    )
+    return []  # RAG 비활성화 (Ollama 제거)
 
 
 async def fetch_law_chunk_hits(

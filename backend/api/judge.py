@@ -10,7 +10,7 @@ from db.models import CaseLog, DocumentMaster, Provision
 from engine.rule_engine import RuleEngine, JudgeInput
 from engine.fee_calculator import calculate as calc_fee
 from engine.checklist import generate as gen_checklist
-from services import rag_service
+from sqlalchemy import text
 
 router = APIRouter(prefix="/api/v1", tags=["judge"])
 _engine = RuleEngine()
@@ -146,16 +146,24 @@ async def _resolve_provisions(
             return provisions, rag_chunks
 
     try:
-        query = f"{req.sign_type} {req.zone} {req.floor}층 {req.area}㎡ 설치 허가 신고 요건"
-        hits = await rag_service.search(db, query, top_k=3)
-        for hit in hits:
+        rows = (await db.execute(
+            text("""
+                SELECT p.article, p.content, d.name AS law_name
+                FROM provision p
+                JOIN document_master d ON d.id = p.document_id
+                WHERE p.content ILIKE :kw
+                LIMIT 3
+            """),
+            {"kw": f"%{req.sign_type}%"},
+        )).mappings().all()
+        for row in rows:
             provisions.append({
-                "law":     hit["법령명"],
-                "article": hit["조문번호"],
-                "content": hit["조문내용"],
-                "similarity": hit["similarity"],
+                "law": row["law_name"],
+                "article": row["article"],
+                "content": row["content"],
+                "similarity": 0.8,
             })
-            rag_chunks.append(hit["조문번호"])
+            rag_chunks.append(row["article"] or "")
     except Exception:
         pass
 
@@ -175,7 +183,7 @@ async def judge(req: JudgeRequest, db: AsyncSession = Depends(get_db)):
     # 3. 서류 목록
     docs = await gen_checklist(db, result.decision, req.sign_type)
 
-    # 4. 근거 조문: 규칙에 연결된 provision_id 우선, 없으면 RAG 보조 검색
+    # 4. 근거 조문: 규칙에 연결된 provision_id 우선, 없으면 키워드 검색
     provisions, rag_chunks = await _resolve_provisions(db, req, result)
 
     # 5. 로그 저장

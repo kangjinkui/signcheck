@@ -3,7 +3,7 @@ import sys
 import types
 import unittest
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -37,6 +37,7 @@ class _SelectStmt:
 
 sqlalchemy_module = types.ModuleType("sqlalchemy")
 sqlalchemy_module.select = lambda *args, **kwargs: _SelectStmt()
+sqlalchemy_module.text = lambda sql: sql
 sys.modules["sqlalchemy"] = sqlalchemy_module
 
 sqlalchemy_ext_module = types.ModuleType("sqlalchemy.ext")
@@ -89,7 +90,6 @@ engine_checklist_module.generate = AsyncMock()
 sys.modules["engine.checklist"] = engine_checklist_module
 
 services_module = types.ModuleType("services")
-services_module.rag_service = types.SimpleNamespace(search=AsyncMock())
 sys.modules["services"] = services_module
 
 from api import judge as judge_module  # noqa: E402
@@ -100,12 +100,24 @@ class _FakeResult:
         self.provision_id = provision_id
 
 
+class _FakeMappings:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
 class _FakeExecuteResult:
-    def __init__(self, row):
+    def __init__(self, row=None, rows=None):
         self._row = row
+        self._rows = rows or []
 
     def first(self):
         return self._row
+
+    def mappings(self):
+        return _FakeMappings(self._rows)
 
 
 class JudgeProvisionResolutionTests(unittest.IsolatedAsyncioTestCase):
@@ -114,7 +126,7 @@ class JudgeProvisionResolutionTests(unittest.IsolatedAsyncioTestCase):
         db = types.SimpleNamespace(
             execute=AsyncMock(
                 return_value=_FakeExecuteResult(
-                    (
+                    row=(
                         types.SimpleNamespace(
                             id=uuid.UUID(provision_id),
                             article="제9조의2",
@@ -128,9 +140,6 @@ class JudgeProvisionResolutionTests(unittest.IsolatedAsyncioTestCase):
                 )
             )
         )
-        judge_module.rag_service.search = AsyncMock(return_value=[
-            {"법령명": "무관한 조례", "조문번호": "제99조", "조문내용": "무관", "similarity": 0.3}
-        ])
         req = types.SimpleNamespace(sign_type="입간판", zone="일반상업지역", floor=11, area=30.0)
 
         provisions, rag_chunks = await judge_module._resolve_provisions(
@@ -144,20 +153,22 @@ class JudgeProvisionResolutionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(provisions[0]["article"], "제9조의2")
         self.assertEqual(provisions[0]["similarity"], 1.0)
         self.assertEqual(rag_chunks, ["제9조의2"])
-        judge_module.rag_service.search.assert_not_awaited()
+        # provision_id 있으면 DB 직접 조회 후 즉시 반환 (ILIKE 검색 안 함)
+        self.assertEqual(db.execute.await_count, 1)
 
-    async def test_resolve_provisions_falls_back_to_rag_when_rule_provision_missing(self):
-        db = types.SimpleNamespace(
-            execute=AsyncMock(return_value=_FakeExecuteResult(None))
-        )
-        judge_module.rag_service.search = AsyncMock(return_value=[
+    async def test_resolve_provisions_falls_back_to_ilike_when_no_provision_id(self):
+        ilike_rows = [
             {
-                "법령명": "서울특별시 옥외광고물 조례",
-                "조문번호": "제9조의2",
-                "조문내용": "입간판은 자사광고만 가능하다.",
-                "similarity": 0.91,
+                "law_name": "서울특별시 옥외광고물 조례",
+                "article": "제9조의2",
+                "content": "입간판은 자사광고만 가능하다.",
             }
-        ])
+        ]
+        db = types.SimpleNamespace(
+            execute=AsyncMock(
+                return_value=_FakeExecuteResult(rows=ilike_rows)
+            )
+        )
         req = types.SimpleNamespace(sign_type="입간판", zone="일반상업지역", floor=1, area=1.0)
 
         provisions, rag_chunks = await judge_module._resolve_provisions(
@@ -167,9 +178,26 @@ class JudgeProvisionResolutionTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(len(provisions), 1)
+        self.assertEqual(provisions[0]["law"], "서울특별시 옥외광고물 조례")
         self.assertEqual(provisions[0]["article"], "제9조의2")
-        self.assertEqual(rag_chunks, ["제9조의2"])
-        judge_module.rag_service.search.assert_awaited_once()
+        self.assertEqual(provisions[0]["similarity"], 0.8)
+
+    async def test_resolve_provisions_returns_empty_when_no_match(self):
+        db = types.SimpleNamespace(
+            execute=AsyncMock(
+                return_value=_FakeExecuteResult(rows=[])
+            )
+        )
+        req = types.SimpleNamespace(sign_type="존재하지않는간판", zone="일반상업지역", floor=1, area=1.0)
+
+        provisions, rag_chunks = await judge_module._resolve_provisions(
+            db,
+            req,
+            _FakeResult(provision_id=None),
+        )
+
+        self.assertEqual(provisions, [])
+        self.assertEqual(rag_chunks, [])
 
 
 if __name__ == "__main__":

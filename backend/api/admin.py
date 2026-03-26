@@ -106,15 +106,13 @@ class DraftRuleImportRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_import_source(self):
-        if self.source_type == "rag" and not self.query:
-            raise ValueError("source_type=rag 일 때 query가 필요합니다.")
         if self.source_type == "law_chunk":
             if not (self.chunk_ids or self.source_document_id or self.source_provision_id):
                 raise ValueError(
                     "source_type=law_chunk 일 때 chunk_ids, source_document_id, source_provision_id 중 하나가 필요합니다."
                 )
-        if self.source_type not in {"rag", "law_chunk", "import", "manual"}:
-            raise ValueError("source_type은 rag, law_chunk, import, manual 중 하나여야 합니다.")
+        if self.source_type not in {"law_chunk", "import", "manual"}:
+            raise ValueError("source_type은 law_chunk, import, manual 중 하나여야 합니다.")
         if self.source_type in {"import", "manual"} and not self.items:
             raise ValueError("source_type=import/manual 일 때 items가 필요합니다.")
         return self
@@ -355,14 +353,7 @@ async def import_draft_rules(body: DraftRuleImportRequest, db: AsyncSession = De
     source_hits: list[dict] = []
 
     if body.source_type == "rag":
-        source_hits = await draft_rule_service.fetch_rag_hits(
-            db,
-            query=body.query or "",
-            top_k=body.top_k,
-            min_similarity=body.min_similarity,
-        )
-        if not source_hits:
-            raise HTTPException(status_code=404, detail="rag search returned no draft candidates")
+        raise HTTPException(status_code=501, detail="RAG import is disabled. Use law_chunk or manual.")
     elif body.source_type == "law_chunk":
         try:
             source_hits = await draft_rule_service.fetch_law_chunk_hits(
