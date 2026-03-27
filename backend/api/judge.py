@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ from sqlalchemy import text
 
 router = APIRouter(prefix="/api/v1", tags=["judge"])
 _engine = RuleEngine()
+logger = logging.getLogger(__name__)
 
 
 class JudgeCommonRequestFields(BaseModel):
@@ -172,64 +175,77 @@ async def _resolve_provisions(
 
 @router.post("/judge", response_model=JudgeResponse)
 async def judge(req: JudgeRequest, db: AsyncSession = Depends(get_db)):
-    inp = JudgeInput(**req.model_dump())
+    try:
+        inp = JudgeInput(**req.model_dump())
 
-    # 1. 규칙 엔진 판정
-    result = await _engine.judge(db, inp)
+        # 1. 규칙 엔진 판정
+        result = await _engine.judge(db, inp)
 
-    # 2. 수수료 계산
-    fee = await calc_fee(db, req.sign_type, req.area, req.light_type, req.ad_type)
+        # 2. 수수료 계산
+        fee = await calc_fee(db, req.sign_type, req.area, req.light_type, req.ad_type)
 
-    # 3. 서류 목록
-    docs = await gen_checklist(db, result.decision, req.sign_type)
+        # 3. 서류 목록
+        docs = await gen_checklist(db, result.decision, req.sign_type)
 
-    # 4. 근거 조문: 규칙에 연결된 provision_id 우선, 없으면 키워드 검색
-    provisions, rag_chunks = await _resolve_provisions(db, req, result)
+        # 4. 근거 조문: 규칙에 연결된 provision_id 우선, 없으면 키워드 검색
+        provisions, rag_chunks = await _resolve_provisions(db, req, result)
 
-    # 5. 로그 저장
-    case_id = str(uuid.uuid4())
-    log = CaseLog(
-        id=uuid.UUID(case_id),
-        input_data=req.model_dump(),
-        output_data={
-            "decision": result.decision,
-            "review_type": result.review_type,
-            "administrative_action": result.administrative_action,
-            "safety_check": result.safety_check,
-            "missing_fields": result.missing_fields,
-            "fallback_reason": result.fallback_reason,
-            "fee": fee.total,
-        },
-        decision=result.decision,
-        fee_calculated=fee.total,
-        rag_chunks_used=rag_chunks,
-    )
-    db.add(log)
-    await db.commit()
+        # 5. 로그 저장
+        case_id = str(uuid.uuid4())
+        log = CaseLog(
+            id=uuid.UUID(case_id),
+            input_data=req.model_dump(),
+            output_data={
+                "decision": result.decision,
+                "review_type": result.review_type,
+                "administrative_action": result.administrative_action,
+                "safety_check": result.safety_check,
+                "missing_fields": result.missing_fields,
+                "fallback_reason": result.fallback_reason,
+                "fee": fee.total,
+            },
+            decision=result.decision,
+            fee_calculated=fee.total,
+            rag_chunks_used=rag_chunks,
+        )
+        db.add(log)
+        await db.commit()
 
-    return JudgeResponse(
-        case_id=case_id,
-        decision=result.decision,
-        review_type=result.review_type,
-        administrative_action=result.administrative_action,
-        safety_check=result.safety_check,
-        max_spec=JudgeMaxSpec(
-            area=f"{result.max_area}㎡ 이하" if result.max_area else None,
-            height=f"{result.max_height}m 이하" if result.max_height else None,
-            protrusion=f"{result.max_protrusion}m 이내" if result.max_protrusion else None,
-            width=f"{result.max_width}m 이내" if result.max_width else None,
-        ),
-        fee=JudgeFeeSummary(
-            base=fee.base_fee,
-            light_weight=fee.light_weight,
-            total=fee.total,
-        ),
-        display_period=result.display_period,
-        required_docs=docs["required"],
-        optional_docs=docs["optional"],
-        provisions=provisions,
-        warnings=result.warnings,
-        matched_rule_id=result.matched_rule_id,
-        missing_fields=result.missing_fields,
-        fallback_reason=result.fallback_reason,
-    )
+        return JudgeResponse(
+            case_id=case_id,
+            decision=result.decision,
+            review_type=result.review_type,
+            administrative_action=result.administrative_action,
+            safety_check=result.safety_check,
+            max_spec=JudgeMaxSpec(
+                area=f"{result.max_area}㎡ 이하" if result.max_area else None,
+                height=f"{result.max_height}m 이하" if result.max_height else None,
+                protrusion=f"{result.max_protrusion}m 이내" if result.max_protrusion else None,
+                width=f"{result.max_width}m 이내" if result.max_width else None,
+            ),
+            fee=JudgeFeeSummary(
+                base=fee.base_fee,
+                light_weight=fee.light_weight,
+                total=fee.total,
+            ),
+            display_period=result.display_period,
+            required_docs=docs["required"],
+            optional_docs=docs["optional"],
+            provisions=provisions,
+            warnings=result.warnings,
+            matched_rule_id=result.matched_rule_id,
+            missing_fields=result.missing_fields,
+            fallback_reason=result.fallback_reason,
+        )
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as exc:
+        await db.rollback()
+        logger.exception(
+            "Judge request failed for sign_type=%s floor=%s area=%s",
+            req.sign_type,
+            req.floor,
+            req.area,
+        )
+        raise HTTPException(status_code=500, detail=f"judge_failed: {exc}") from exc

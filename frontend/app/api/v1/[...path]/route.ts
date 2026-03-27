@@ -22,12 +22,21 @@ async function proxy(request: NextRequest, context: { params: { path: string[] }
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete('host');
 
-  const upstream = await fetch(target, {
-    method: request.method,
-    headers: requestHeaders,
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text(),
-    redirect: 'manual',
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers: requestHeaders,
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text(),
+      redirect: 'manual',
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'unknown upstream fetch error';
+    return NextResponse.json(
+      { detail: `upstream_fetch_failed: ${detail}`, upstream: target.toString() },
+      { status: 502 },
+    );
+  }
 
   const responseHeaders = new Headers(upstream.headers);
   responseHeaders.delete('content-encoding');
