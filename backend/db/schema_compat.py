@@ -5,10 +5,8 @@ from db.models import Base
 
 
 COMPATIBILITY_SQL = (
-    """
-    CREATE EXTENSION IF NOT EXISTS vector;
-    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-    """,
+    'CREATE EXTENSION IF NOT EXISTS vector',
+    'CREATE EXTENSION IF NOT EXISTS "pgcrypto"',
     """
     ALTER TABLE rule_condition
       ADD COLUMN IF NOT EXISTS install_subtype VARCHAR(100),
