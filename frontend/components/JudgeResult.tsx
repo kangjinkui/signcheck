@@ -31,6 +31,42 @@ const FALLBACK_LABEL: Record<string, string> = {
   missing_rule: '규칙 미정의',
 };
 
+const FIELD_LABEL: Record<string, string> = {
+  install_subtype: '벽면 하위 유형',
+  form_type: '형태',
+  content_type: '표시 내용',
+  display_orientation: '표시 방향',
+  business_category: '업종',
+  height: '세로 길이',
+  width: '가로 길이',
+  protrusion: '돌출폭',
+  thickness: '두께',
+  bottom_clearance: '지면 이격',
+  top_height_from_ground: '상단 높이',
+  face_area: '1면 면적',
+  building_height: '건물 높이',
+  floor_height: '층고',
+  existing_sign_count_for_business: '기설치 간판 수',
+  has_sidewalk: '보도 접면 여부',
+  exception_review_approved: '심의 특례 승인 여부',
+  shop_front_width: '업소 가로폭',
+  sign_width: '간판 가로',
+  sign_height: '간판 세로/높이',
+  sign_area: '간판 면적',
+  is_corner_lot: '곡각지점 여부',
+  has_front_and_rear_roads: '전후면 도로 접면 여부',
+  building_floor_count: '건물 층수',
+  install_at_top_floor: '최상단 설치 여부',
+  building_width: '건물 가로폭',
+  requested_faces: '신청 면 수',
+  horizontal_distance_to_other_sign: '최근접 옥상간판 수평거리',
+  vendor_count: '연립 업체 수',
+  has_performance_hall: '공연장 여부',
+  base_width: '바닥면 가로',
+  base_depth: '바닥면 세로',
+  distance_from_building: '건물면으로부터 거리',
+};
+
 interface Props {
   result: JudgeResponse;
   onChatOpen: () => void;
@@ -103,7 +139,9 @@ export default function JudgeResult({ result, onChatOpen }: Props) {
           <div className="result-item">
             <h4>🧩 누락 입력</h4>
             <ul>
-              {result.missing_fields.map((field, i) => <li key={i}>{field}</li>)}
+              {result.missing_fields.map((field, i) => (
+                <li key={i}>{FIELD_LABEL[field] ?? field}</li>
+              ))}
             </ul>
           </div>
         )}

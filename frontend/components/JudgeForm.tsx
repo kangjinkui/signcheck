@@ -110,6 +110,125 @@ const defaultForm: JudgeRequest = {
   exception_review_approved: false,
 };
 
+function applySignTypeDefaults(prev: JudgeRequest, nextSignType: string): JudgeRequest {
+  if (nextSignType === '벽면이용간판') {
+    return {
+      ...applyWallSubtypeDefaults(prev, prev.install_subtype ?? 'wall_sign_general_under_5f'),
+      sign_type: nextSignType,
+    };
+  }
+
+  const base: JudgeRequest = {
+    ...prev,
+    sign_type: nextSignType,
+    install_subtype: null,
+    form_type: null,
+    content_type: null,
+    display_orientation: null,
+    vendor_count: null,
+    shop_front_width: null,
+    sign_width: null,
+    sign_height: null,
+    sign_area: null,
+    building_floor_count: null,
+    install_at_top_floor: null,
+    building_width: null,
+    requested_faces: null,
+    horizontal_distance_to_other_sign: null,
+    has_performance_hall: null,
+    base_width: null,
+    base_depth: null,
+    distance_from_building: null,
+  };
+
+  switch (nextSignType) {
+    case '돌출간판':
+      return {
+        ...base,
+        area: prev.area || 3,
+        business_category: prev.business_category || '일반음식점',
+        height: prev.height ?? 3,
+        width: prev.width ?? 1,
+        protrusion: prev.protrusion ?? 1,
+        thickness: prev.thickness ?? 0.3,
+        bottom_clearance: prev.bottom_clearance ?? 3,
+        top_height_from_ground: prev.top_height_from_ground ?? 5,
+        face_area: prev.face_area ?? 1,
+        building_height: prev.building_height ?? 20,
+        floor_height: prev.floor_height ?? 3.5,
+        existing_sign_count_for_business: prev.existing_sign_count_for_business ?? 0,
+        has_sidewalk: prev.has_sidewalk ?? true,
+        exception_review_approved: prev.exception_review_approved ?? false,
+      };
+    case '옥상간판':
+      return {
+        ...base,
+        area: prev.area || 8,
+        sign_height: prev.sign_height ?? 3,
+        building_height: prev.building_height ?? 20,
+        building_floor_count: prev.building_floor_count ?? 5,
+        horizontal_distance_to_other_sign: prev.horizontal_distance_to_other_sign ?? 10,
+      };
+    case '지주이용간판':
+      return {
+        ...base,
+        area: prev.area || 8,
+        vendor_count: prev.vendor_count ?? 1,
+        sign_height: prev.sign_height ?? 4,
+      };
+    case '입간판':
+      return {
+        ...base,
+        sign_width: prev.sign_width ?? 0.6,
+        sign_height: prev.sign_height ?? 1.2,
+        area: calculateArea(prev.sign_width ?? 0.6, prev.sign_height ?? 1.2) ?? 0.72,
+        has_sidewalk: prev.has_sidewalk ?? true,
+        base_width: prev.base_width ?? 0.5,
+        base_depth: prev.base_depth ?? 0.5,
+        distance_from_building: prev.distance_from_building ?? 0,
+      };
+    case '공연간판':
+      return {
+        ...base,
+        area: prev.area || 3,
+        vendor_count: prev.vendor_count ?? 1,
+        protrusion: prev.protrusion ?? 0.8,
+        sign_width: prev.sign_width ?? 3,
+        building_width: prev.building_width ?? 10,
+        has_performance_hall: prev.has_performance_hall ?? false,
+      };
+    case '현수막':
+      return {
+        ...base,
+        sign_width: prev.sign_width ?? 5,
+        sign_height: prev.sign_height ?? 1,
+        area: calculateArea(prev.sign_width ?? 5, prev.sign_height ?? 1) ?? 5,
+      };
+    case '애드벌룬':
+      return {
+        ...base,
+        area: prev.area || 10,
+        sign_height: prev.sign_height ?? 10,
+        building_height: prev.building_height ?? 20,
+      };
+    case '애드벌룬(지면)':
+      return {
+        ...base,
+        area: prev.area || 10,
+        sign_height: prev.sign_height ?? 10,
+      };
+    case '창문이용광고물':
+      return {
+        ...base,
+        sign_width: prev.sign_width ?? 2,
+        sign_height: prev.sign_height ?? 1,
+        area: calculateArea(prev.sign_width ?? 2, prev.sign_height ?? 1) ?? 2,
+      };
+    default:
+      return base;
+  }
+}
+
 function applyWallSubtypeDefaults(prev: JudgeRequest, nextSubtype: string): JudgeRequest {
   if (nextSubtype === 'wall_sign_general_under_5f') {
     const signWidth = prev.sign_width ?? 8;
@@ -218,21 +337,7 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
             value={form.sign_type}
             onChange={e => {
               const nextSignType = e.target.value;
-              setForm(prev =>
-                nextSignType === '벽면이용간판'
-                  ? {
-                      ...applyWallSubtypeDefaults(prev, prev.install_subtype ?? 'wall_sign_general_under_5f'),
-                      sign_type: nextSignType,
-                    }
-                  : {
-                      ...prev,
-                      sign_type: nextSignType,
-                      install_subtype: null,
-                      form_type: null,
-                      content_type: null,
-                      display_orientation: null,
-                    }
-              );
+              setForm(prev => applySignTypeDefaults(prev, nextSignType));
             }}
           >
             {SIGN_TYPES.map(t => <option key={t}>{t}</option>)}
