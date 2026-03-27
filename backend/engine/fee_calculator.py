@@ -45,9 +45,14 @@ async def calculate(
         select(FeeRule).where(
             FeeRule.sign_type == sign_type,
             FeeRule.ad_type == ad_type,
+        ).order_by(
+            FeeRule.area_threshold.desc(),
+            FeeRule.base_fee.desc(),
+            FeeRule.extra_fee.desc(),
+            FeeRule.id.asc(),
         )
     )
-    rule = result.scalar_one_or_none()
+    rule = result.scalars().first()
 
     if not rule:
         # 규칙 없음 → 0원 반환 (관리자가 등록 필요)
