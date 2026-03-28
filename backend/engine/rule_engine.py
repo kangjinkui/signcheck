@@ -696,7 +696,6 @@ class RuleEngine:
     def _collect_missing_fields(self, input: JudgeInput) -> list[str]:
         required_fields_by_sign_type: dict[str, tuple[str, ...]] = {
             "돌출간판": (
-                "business_category",
                 "height",
                 "width",
                 "protrusion",
