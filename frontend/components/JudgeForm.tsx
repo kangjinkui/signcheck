@@ -641,16 +641,6 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
         {isProjectingSign && (
           <>
             <div className="form-group">
-              <label>업종</label>
-              <input
-                type="text"
-                value={form.business_category ?? ''}
-                onChange={e => set('business_category', e.target.value)}
-                placeholder="예: 일반음식점"
-              />
-            </div>
-
-            <div className="form-group">
               <label>세로 길이 (m)</label>
               <input
                 type="number"
