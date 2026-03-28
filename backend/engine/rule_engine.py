@@ -252,6 +252,14 @@ class RuleEngine:
         if zone_check:
             return zone_check
 
+        # 5층 이하 일반 벽면이용간판: 6층 이상 설치는 규칙 존재 여부와 무관하게 불가
+        if input.floor is not None and input.floor > 5:
+            return JudgeResult(
+                decision="prohibited",
+                administrative_action=None,
+                warnings=["5층 이하 일반 벽면이용간판은 1층부터 5층까지만 설치할 수 있습니다."],
+            )
+
         rules = await self._fetch_matching_rules(db, input)
         if not rules:
             return JudgeResult(

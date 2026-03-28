@@ -371,7 +371,8 @@ export default function JudgeForm({ onSubmit, loading }: Props) {
         <div className="form-group">
           <label>설치 층수</label>
           <input type="number" min={1} max={100} value={form.floor}
-            onChange={e => set('floor', parseInt(e.target.value) || 1)} />
+            onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) set('floor', v); }}
+            onBlur={e => { if (!e.target.value || parseInt(e.target.value) < 1) set('floor', 1); }} />
         </div>
 
         <div className="form-group">
