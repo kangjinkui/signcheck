@@ -156,3 +156,50 @@ tr:hover td { background: #fafbff; }
 
 .error-msg { color: #c53030; background: #fde8e8; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin: 8px 0; }
 .loading { color: #888; font-size: 13px; padding: 20px 0; text-align: center; }
+
+/* Layout helpers */
+.header-nav { display: flex; gap: 16px; align-items: center; }
+.main-content { padding: 24px 0 120px; }
+
+/* ================================
+   Responsive — 768px 이하
+   ================================ */
+@media (max-width: 768px) {
+  .container { padding: 0 12px; }
+
+  header .container { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .header-nav { gap: 12px; }
+  header h1 { font-size: 16px; }
+
+  .form-grid { grid-template-columns: 1fr; }
+  .result-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+
+  .chat-panel { width: calc(100vw - 32px); right: 16px; }
+  .chat-body { height: 300px; }
+
+  .submit-row .btn { width: 100%; }
+  .main-content { padding: 16px 0 80px; }
+}
+
+/* ================================
+   Responsive — 480px 이하
+   ================================ */
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+
+  header h1 { font-size: 14px; }
+  header span { display: none; }
+
+  .card { padding: 16px; }
+  .card-title { font-size: 14px; }
+
+  .stat-grid { grid-template-columns: 1fr; }
+
+  .section-tabs { flex-wrap: wrap; }
+  .tab-btn { font-size: 12px; padding: 6px 12px; }
+
+  .decision-badge { font-size: 14px; padding: 6px 16px; }
+
+  .chat-panel { width: calc(100vw - 24px); right: 12px; }
+}

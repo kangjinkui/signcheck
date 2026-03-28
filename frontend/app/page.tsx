@@ -27,7 +27,7 @@ export default function HomePage() {
   };
 
   return (
-    <main style={{ padding: '24px 0 120px' }}>
+    <main className="main-content">
       <div className="container">
         <JudgeForm onSubmit={handleSubmit} loading={loading} />
         {error && <div className="error-msg">❌ {error}</div>}

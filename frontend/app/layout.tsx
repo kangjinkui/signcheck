@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header>
           <div className="container">
             <h1>AdJudge 광고판정 시스템</h1>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <div className="header-nav">
               <span>강남구 내부 시스템</span>
               <a href="/admin">관리자</a>
             </div>
