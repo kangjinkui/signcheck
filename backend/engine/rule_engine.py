@@ -857,22 +857,31 @@ class RuleEngine:
             violations.append("건물 상단간판 표시 방향은 horizontal 또는 vertical 이어야 합니다.")
         if input.content_type not in {"building_name", "business_name", "symbol"}:
             violations.append("건물 상단간판 표시 내용은 건물명, 상호, 상징 도형만 허용됩니다.")
+        # 아랫부분 4층 이상 위치 검증 (제4조제1항제3호 다항)
+        if (
+            input.building_height is not None
+            and input.building_floor_count is not None
+            and input.building_floor_count >= 4
+            and input.sign_height is not None
+        ):
+            avg_floor_height = input.building_height / input.building_floor_count
+            sign_bottom_height = input.building_height - input.sign_height
+            fourth_floor_height = 3 * avg_floor_height  # 4층 바닥 = 3개 층 높이
+            if sign_bottom_height < fourth_floor_height:
+                violations.append(
+                    f"간판 아랫부분이 4층 미만({sign_bottom_height:.1f}m)에 위치합니다. "
+                    f"4층 높이({fourth_floor_height:.1f}m) 이상이어야 합니다."
+                )
         return violations
 
     def _wall_sign_top_building_max_specs(self, input: JudgeInput) -> tuple[Optional[float], Optional[float]]:
-        if input.display_orientation == "horizontal":
-            max_width = (input.building_width or 0) / 2 if input.building_width is not None else None
-            if input.building_floor_count is None:
-                return max_width, None
-            max_height = min(0.6 + max(input.building_floor_count - 4, 0) * 0.1, 1.2)
-            return max_width, max_height
-        if input.display_orientation == "vertical":
-            max_width = 1.2
-            if input.building_height is None:
-                return max_width, None
-            max_height = min(input.building_height / 2, 10.0)
-            return max_width, max_height
-        return None, None
+        # 서울시 조례 제4조제1항제3호 다항 적용
+        # 가로: 2m 이내, 세로: 건물 높이의 1/2 이내로서 최대 10m
+        max_width = 2.0
+        if input.building_height is None:
+            return max_width, None
+        max_height = min(input.building_height / 2, 10.0)
+        return max_width, max_height
 
     def _map_administrative_action(self, decision: str) -> Optional[str]:
         if decision in {"permit", "report"}:
