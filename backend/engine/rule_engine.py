@@ -363,16 +363,13 @@ class RuleEngine:
                 f"간판 세로 {input.sign_height}m가 허용 기준 {max_height}m를 초과합니다."
             )
 
-        warnings = list(effect.warnings or [])
-        # 세로형은 제4조제1항제3호(건물명·상호·상징 도형 세로 표시) 적용
-        # 가로형(면적형)은 제4조제1항제4호 적용 — DB 규칙 기본값
-        if input.display_orientation == "vertical":
-            warnings = [
-                w.replace("제4조제1항제4호", "제4조제1항제3호")
-                 .replace("제4조④", "제4조제1항제3호")
-                for w in warnings
-            ]
-        warnings.append("건물 상단간판은 옥외광고심의위원회 심의가 필수입니다.")
+        # DB effect.warnings는 일반 벽면이용간판 규격을 담고 있으므로 사용하지 않음
+        # 건물 상단간판은 서울시 조례 제4조제1항제3호 다항 전용 경고문 사용
+        warnings = [
+            f"가로 {max_width}m 이내, 세로 건물 높이의 1/2(최대 10m) 이내 "
+            f"(서울시 조례 제4조제1항제3호 다항)",
+            "건물 상단간판은 옥외광고심의위원회 심의가 필수입니다.",
+        ]
 
         if violations:
             return JudgeResult(
