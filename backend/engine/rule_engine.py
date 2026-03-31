@@ -334,7 +334,13 @@ class RuleEngine:
         if zone_check:
             return zone_check
 
-        rules = await self._fetch_matching_rules(db, input)
+        # 건물 상단간판은 rule_condition의 floor 범위가 건물 층수 기준이므로
+        # install floor 대신 building_floor_count로 조회
+        lookup_input = input
+        if input.building_floor_count is not None and input.building_floor_count != input.floor:
+            from dataclasses import replace
+            lookup_input = replace(input, floor=input.building_floor_count)
+        rules = await self._fetch_matching_rules(db, lookup_input)
         if not rules:
             return JudgeResult(
                 decision="report",
