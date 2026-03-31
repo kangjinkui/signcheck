@@ -416,14 +416,14 @@ FROM rc;
 WITH rc AS (INSERT INTO rule_condition (sign_type, install_subtype, floor_min, floor_max, ad_type, priority) VALUES ('벽면이용간판', 'wall_sign_top_building', 4, 15, 'self', 150) RETURNING id)
 INSERT INTO rule_effect (rule_id, decision, review_type, safety_check, max_area, max_protrusion, display_period, warnings, provision_id)
 SELECT rc.id, 'permit', '대심의', true, 225.00, 0.40, '3년',
-  '["면적 225㎡ 이하, 돌출폭 40cm 이내, 구조안전확인 필요 (서울시 조례 제4조④)"]'::jsonb,
+  '["면적 225㎡ 이하, 돌출폭 40cm 이내, 구조안전확인 필요 (서울시 조례 제4조제1항제4호) — 세로형은 제4조제1항제3호 적용"]'::jsonb,
   '8c1d1895-39a8-4065-b636-b0e0b9d3d5d1'
 FROM rc;
 
 WITH rc AS (INSERT INTO rule_condition (sign_type, install_subtype, floor_min, floor_max, ad_type, priority) VALUES ('벽면이용간판', 'wall_sign_top_building', 4, 15, 'third_party', 155) RETURNING id)
 INSERT INTO rule_effect (rule_id, decision, review_type, safety_check, max_area, max_protrusion, display_period, warnings, provision_id)
 SELECT rc.id, 'permit', '대심의', true, 225.00, 0.40, '3년',
-  '["면적 225㎡ 이하, 상업지역 건물에 한하여 타사광고 가능 (서울시 조례 제4조④나)"]'::jsonb,
+  '["면적 225㎡ 이하, 상업지역 건물에 한하여 타사광고 가능 (서울시 조례 제4조제1항제4호나목) — 세로형은 제4조제1항제3호 적용"]'::jsonb,
   '8c1d1895-39a8-4065-b636-b0e0b9d3d5d1'
 FROM rc;
 

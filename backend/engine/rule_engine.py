@@ -358,6 +358,14 @@ class RuleEngine:
             )
 
         warnings = list(effect.warnings or [])
+        # 세로형은 제4조제1항제3호(건물명·상호·상징 도형 세로 표시) 적용
+        # 가로형(면적형)은 제4조제1항제4호 적용 — DB 규칙 기본값
+        if input.display_orientation == "vertical":
+            warnings = [
+                w.replace("제4조제1항제4호", "제4조제1항제3호")
+                 .replace("제4조④", "제4조제1항제3호")
+                for w in warnings
+            ]
         warnings.append("건물 상단간판은 옥외광고심의위원회 심의가 필수입니다.")
 
         if violations:
