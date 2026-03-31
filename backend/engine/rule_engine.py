@@ -364,10 +364,22 @@ class RuleEngine:
             )
 
         # DB effect.warnings는 일반 벽면이용간판 규격을 담고 있으므로 사용하지 않음
-        # 건물 상단간판은 서울시 조례 제4조제1항제3호 다항 전용 경고문 사용
+        # orientation에 따라 적용 조문이 다름
+        if input.display_orientation == "vertical":
+            # 제4조제1항제3호 다목: 세로로 길게 표시
+            spec_notice = (
+                f"가로 {max_width}m 이내, 세로 건물 높이의 1/2(최대 10m) 이내 "
+                f"(서울시 조례 제4조제1항제3호 다목)"
+            )
+        else:
+            # 제4조제1항제3호 나목: 가로로 길게 표시
+            width_desc = f"건물 폭({input.building_width}m)의 1/2 이내" if input.building_width else "건물 폭의 1/2 이내"
+            spec_notice = (
+                f"가로 {width_desc}, 세로 3m 이내 "
+                f"(서울시 조례 제4조제1항제3호 나목)"
+            )
         warnings = [
-            f"가로 {max_width}m 이내, 세로 건물 높이의 1/2(최대 10m) 이내 "
-            f"(서울시 조례 제4조제1항제3호 다항)",
+            spec_notice,
             "건물 상단간판은 옥외광고심의위원회 심의가 필수입니다.",
         ]
 
@@ -872,13 +884,20 @@ class RuleEngine:
         return violations
 
     def _wall_sign_top_building_max_specs(self, input: JudgeInput) -> tuple[Optional[float], Optional[float]]:
-        # 서울시 조례 제4조제1항제3호 다항 적용
-        # 가로: 2m 이내, 세로: 건물 높이의 1/2 이내로서 최대 10m
-        max_width = 2.0
-        if input.building_height is None:
-            return max_width, None
-        max_height = min(input.building_height / 2, 10.0)
-        return max_width, max_height
+        if input.display_orientation == "vertical":
+            # 서울시 조례 제4조제1항제3호 다목 (세로로 길게 표시)
+            # 가로: 2m 이내, 세로: 건물 높이의 1/2 이내 최대 10m
+            max_width = 2.0
+            if input.building_height is None:
+                return max_width, None
+            max_height = min(input.building_height / 2, 10.0)
+            return max_width, max_height
+        else:
+            # 서울시 조례 제4조제1항제3호 나목 (가로로 길게 표시, horizontal)
+            # 가로: 건물 폭의 1/2 이내, 세로: 3m 이내
+            max_width = (input.building_width / 2) if input.building_width is not None else None
+            max_height = 3.0
+            return max_width, max_height
 
     def _map_administrative_action(self, decision: str) -> Optional[str]:
         if decision in {"permit", "report"}:
