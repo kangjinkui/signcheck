@@ -704,7 +704,7 @@ class RuleEngine:
             max_area=float(effect.max_area) if effect.max_area else None,
             max_height=self._projecting_sign_max_height(input, effect),
             max_protrusion=float(effect.max_protrusion) if effect.max_protrusion else 1.0,
-            max_width=float(effect.max_width) if effect.max_width else None,
+            max_width=self._projecting_sign_max_width(effect, context.exception_rule),
             display_period=effect.display_period,
             warnings=warnings,
             matched_rule_id=str(context.condition.id),
@@ -969,6 +969,12 @@ class RuleEngine:
         floor_height_limit = input.floor_height if input.floor_height is not None else effect_max_height
         return min(effect_max_height, floor_height_limit)
 
+    def _projecting_sign_max_width(self, effect, exception_rule=None) -> float:
+        max_width = float(effect.max_protrusion) if effect.max_protrusion else 1.0
+        if exception_rule and getattr(exception_rule, "max_protrusion", None) is not None:
+            max_width = float(exception_rule.max_protrusion)
+        return max_width
+
     def _collect_projecting_sign_spec_violations(
         self,
         input: JudgeInput,
@@ -979,13 +985,16 @@ class RuleEngine:
         max_height = self._projecting_sign_max_height(input, effect)
         if exception_rule and getattr(exception_rule, "max_height", None) is not None:
             max_height = min(max_height, float(exception_rule.max_height))
-        max_protrusion = float(effect.max_protrusion) if effect.max_protrusion else 1.0
-        if exception_rule and getattr(exception_rule, "max_protrusion", None) is not None:
-            max_protrusion = float(exception_rule.max_protrusion)
+        max_protrusion = self._projecting_sign_max_width(effect, exception_rule)
 
         if input.height is not None and input.height > max_height:
             violations.append(
                 f"세로 길이 {input.height}m가 허용 기준 {max_height}m를 초과합니다."
+            )
+
+        if input.width is not None and input.width > max_protrusion:
+            violations.append(
+                f"가로 길이 {input.width}m가 허용 기준 {max_protrusion}m를 초과합니다."
             )
 
         if input.protrusion is not None and input.protrusion > max_protrusion:
@@ -1090,7 +1099,7 @@ class RuleEngine:
             max_area=float(effect.max_area) if effect.max_area else None,
             max_height=self._get_effect_float(effect, "max_height"),
             max_protrusion=self._get_effect_float(effect, "max_protrusion"),
-            max_width=float(effect.max_width) if effect.max_width else None,
+            max_width=self._projecting_sign_max_width(effect, context.exception_rule),
             display_period=effect.display_period,
             warnings=warnings,
             matched_rule_id=str(context.condition.id),
