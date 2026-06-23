@@ -144,6 +144,11 @@ class ProjectingSignRuleEngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.decision, "prohibited")
         self.assertIn("돌출폭 1.2m", result.warnings[-1])
 
+    async def test_projecting_sign_prohibited_when_width_exceeds_protrusion_limit(self):
+        result = await self._run_judge(make_input(width=3.0))
+        self.assertEqual(result.decision, "prohibited")
+        self.assertIn("가로 길이 3.0m", result.warnings[-1])
+
     async def test_projecting_sign_prohibited_when_height_exceeds_limit(self):
         result = await self._run_judge(make_input(height=3.3))
         self.assertEqual(result.decision, "prohibited")
@@ -220,6 +225,7 @@ class ProjectingSignRuleEngineTests(unittest.IsolatedAsyncioTestCase):
             make_input(
                 business_category="미용실",
                 height=0.7,
+                width=0.4,
                 protrusion=0.4,
                 existing_sign_count_for_business=1,
             ),
