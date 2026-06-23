@@ -248,10 +248,10 @@ SELECT rc.id, 'report', '소심의', 0.80, 10.00, 0.30, '3년',
   '8c1d1895-39a8-4065-b636-b0e0b9d3d5d1'
 FROM rc;
 
--- 벽면이용간판: 4-15층 자사 (permit, priority 150)
+-- 벽면이용간판: 4층 이상 건물 상단간판 자사 (permit, priority 150)
 WITH rc AS (
-  INSERT INTO rule_condition (sign_type, install_subtype, floor_min, floor_max, ad_type, priority)
-  VALUES ('벽면이용간판', 'wall_sign_top_building', 4, 15, 'self', 150)
+  INSERT INTO rule_condition (sign_type, install_subtype, floor_min, ad_type, priority)
+  VALUES ('벽면이용간판', 'wall_sign_top_building', 4, 'self', 150)
   RETURNING id
 )
 INSERT INTO rule_effect (rule_id, decision, review_type, safety_check, max_area, max_protrusion, display_period, warnings, provision_id)
@@ -260,10 +260,10 @@ SELECT rc.id, 'permit', '대심의', true, 225.00, 0.40, '3년',
   '8c1d1895-39a8-4065-b636-b0e0b9d3d5d1'
 FROM rc;
 
--- 벽면이용간판: 4-15층 타사 (permit, priority 155)
+-- 벽면이용간판: 4층 이상 건물 상단간판 타사 (permit, priority 155)
 WITH rc AS (
-  INSERT INTO rule_condition (sign_type, install_subtype, floor_min, floor_max, ad_type, priority)
-  VALUES ('벽면이용간판', 'wall_sign_top_building', 4, 15, 'third_party', 155)
+  INSERT INTO rule_condition (sign_type, install_subtype, floor_min, ad_type, priority)
+  VALUES ('벽면이용간판', 'wall_sign_top_building', 4, 'third_party', 155)
   RETURNING id
 )
 INSERT INTO rule_effect (rule_id, decision, review_type, safety_check, max_area, max_protrusion, display_period, warnings, provision_id)
