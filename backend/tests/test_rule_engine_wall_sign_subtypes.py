@@ -159,7 +159,7 @@ class WallSignSubtypeRuleEngineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.review_type, "대심의")
         self.assertEqual(result.max_area, 225.0)
         self.assertEqual(result.max_width, 10.0)
-        self.assertEqual(result.max_height, 1.2)
+        self.assertEqual(result.max_height, 3.0)
         self.assertIn("심의가 필수", " ".join(result.warnings))
 
     async def test_wall_sign_top_building_requires_top_floor(self):
@@ -199,8 +199,28 @@ class WallSignSubtypeRuleEngineTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(result.decision, "permit")
-        self.assertEqual(result.max_width, 1.2)
+        self.assertEqual(result.max_width, 2.0)
         self.assertEqual(result.max_height, 10.0)
+
+    async def test_wall_sign_top_building_blocks_horizontal_width_over_half_building_width_above_15f(self):
+        self.engine._fetch_matching_rules = AsyncMock(
+            return_value=[(make_condition(), make_effect(decision="permit", review_type="대심의", max_area=225.0))]
+        )
+
+        result = await self.engine.judge(
+            self.db,
+            make_top_input(
+                floor=16,
+                building_floor_count=16,
+                building_width=27.0,
+                sign_width=14.7,
+                sign_height=3.0,
+            ),
+        )
+
+        self.assertEqual(result.decision, "prohibited")
+        self.assertEqual(result.max_width, 13.5)
+        self.assertIn("허용 기준 13.5m를 초과", " ".join(result.warnings))
 
     async def test_wall_sign_top_building_blocks_non_allowed_content_type(self):
         self.engine._fetch_matching_rules = AsyncMock(
